@@ -1,0 +1,2 @@
+Stream: Infrared
+Frame Counter: 0

@@ -1,0 +1,8 @@
+Stream: Infrared
+Frame Counter: 7263
+Frame Timestamp: 1556533631
+Time Of Arrival: 1719347202496
+Backend Timestamp: 1719347202476
+Frame Laser Power: 100
+Frame Laser Power Mode: 0
+Raw Frame Size: 307200

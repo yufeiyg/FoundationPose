@@ -60,6 +60,8 @@ class YcbineoatReader:
     self.downscale = downscale
     self.zfar = zfar
     self.color_files = sorted(glob.glob(f"{self.video_dir}/rgb/*.png"))
+    self.depth_files = sorted(glob.glob(f"{self.video_dir}/depth/*.png"))
+    self.mask_files = sorted(glob.glob(f"{self.video_dir}/masks/*.png"))
     self.K = np.loadtxt(f'{video_dir}/cam_K.txt').reshape(3,3)
     self.id_strs = []
     for color_file in self.color_files:
@@ -107,10 +109,12 @@ class YcbineoatReader:
   def get_color(self,i):
     color = imageio.imread(self.color_files[i])[...,:3]
     color = cv2.resize(color, (self.W,self.H), interpolation=cv2.INTER_NEAREST)
+    print("GET COLOR COLOR SHAPE: " + str(color.shape))
     return color
 
   def get_mask(self,i):
     mask = cv2.imread(self.color_files[i].replace('rgb','masks'),-1)
+    # mask = cv2.imread(self.mask_files[i].replace('rgb','masks'),-1)
     if len(mask.shape)==3:
       for c in range(3):
         if mask[...,c].sum()>0:
@@ -121,7 +125,14 @@ class YcbineoatReader:
 
   def get_depth(self,i):
     depth = cv2.imread(self.color_files[i].replace('rgb','depth'),-1)/1e3
+    print("name of file: " + self.depth_files[i].replace('rgb','depth'))
+    depth_without_flag = cv2.imread(self.depth_files[i].replace('rgb','depth'))/1e3
+    print("DEPTH WITHOUT FLAG: " + str(depth_without_flag.shape))
+    # import pdb; pdb.set_trace()
+    # depth = cv2.imread(self.depth_files[i].replace('rgb','depth'),-1)/1e3
+    print("GET DEPTH DEPTH SHAPE BEFORE: " + str(depth.shape))
     depth = cv2.resize(depth, (self.W,self.H), interpolation=cv2.INTER_NEAREST)
+    print("GET DEPTH DEPTH SHAPE AFTER: " + str(depth.shape))
     depth[(depth<0.1) | (depth>=self.zfar)] = 0
     return depth
 

@@ -11,6 +11,9 @@ from estimater import *
 from datareader import *
 import argparse
 
+# Setting up lcm publishing
+import lcm
+
 
 if __name__=='__main__':
   parser = argparse.ArgumentParser()
@@ -71,6 +74,7 @@ if __name__=='__main__':
 
     if debug>=1:
       center_pose = pose@np.linalg.inv(to_origin)
+      print("This is the object pose" + str(center_pose))
       vis = draw_posed_3d_box(reader.K, img=color, ob_in_cam=center_pose, bbox=bbox)
       vis = draw_xyz_axis(color, ob_in_cam=center_pose, scale=0.1, K=reader.K, thickness=3, transparency=0, is_input_rgb=True)
       cv2.imshow('1', vis[...,::-1])

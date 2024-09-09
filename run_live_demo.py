@@ -5,6 +5,7 @@
 # and any modifications thereto.  Any use, reproduction, disclosure or
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
+import datetime
 import pyrealsense2 as rs
 from estimater import *
 from datareader import *
@@ -14,6 +15,36 @@ from FoundationPose.lcm_systems.pose_publisher import PosePublisher
 # imports for reading camera extrinsics
 import yaml
 from scipy.spatial.transform import Rotation as R
+
+
+def get_world_T_cam():
+    # Handle dates and changing extrinsics.
+    today = datetime.date.today()
+
+    if today <= datetime.date(year=2024, month=9, day=8):
+        # read camera extrinsics from the extrinsics_thru_09_08_24.yaml file
+        with open('extrinsics_thru_09_08_24.yaml') as file:
+            data_loaded = yaml.safe_load(file)
+        cam_position_x = data_loaded['cam0']['pose']['position']['x']
+        cam_position_y = data_loaded['cam0']['pose']['position']['y']
+        cam_position_z = data_loaded['cam0']['pose']['position']['z']
+        cam_orientation_x = data_loaded['cam0']['pose']['rotation']['x']
+        cam_orientation_y = data_loaded['cam0']['pose']['rotation']['y']
+        cam_orientation_z = data_loaded['cam0']['pose']['rotation']['z']
+
+        cam_rotation = R.from_rotvec([cam_orientation_x, cam_orientation_y, cam_orientation_z])
+        rotation_matrix = cam_rotation.as_matrix()
+        world_to_cam = np.array([
+            [rotation_matrix[0][0], rotation_matrix[0][1], rotation_matrix[0][2], cam_position_x],
+            [rotation_matrix[1][0], rotation_matrix[1][1], rotation_matrix[1][2], cam_position_y],
+            [rotation_matrix[2][0], rotation_matrix[2][1], rotation_matrix[2][2], cam_position_z],
+            [0, 0, 0, 1]])
+
+    else:
+        cam_to_world = np.load('extrinsics_starting_09_09_24_color_tf_world.npy')
+        world_to_cam = np.linalg.inv(cam_to_world)
+
+    return world_to_cam
 
 
 if __name__=='__main__':
@@ -101,23 +132,9 @@ if __name__=='__main__':
   cam_K = np.array([[381.8276672363281, 0.0, 320.3140869140625],
                     [0.0, 381.4604187011719, 244.2602081298828],
                     [0.0, 0.0, 1.0]])
-  
-  # read camera extrinsics from the extrinsics.yaml file
-  with open('extrinsics.yaml') as file:
-      data_loaded = yaml.safe_load(file)
-  cam_position_x = data_loaded['cam0']['pose']['position']['x']
-  cam_position_y = data_loaded['cam0']['pose']['position']['y']
-  cam_position_z = data_loaded['cam0']['pose']['position']['z']
-  cam_orientation_x = data_loaded['cam0']['pose']['rotation']['x']
-  cam_orientation_y = data_loaded['cam0']['pose']['rotation']['y']
-  cam_orientation_z = data_loaded['cam0']['pose']['rotation']['z']
 
-  cam_rotation = R.from_rotvec([cam_orientation_x, cam_orientation_y, cam_orientation_z])
-  rotation_matrix = cam_rotation.as_matrix()
-  world_to_cam = np.array([[rotation_matrix[0][0], rotation_matrix[0][1], rotation_matrix[0][2], cam_position_x],
-                      [rotation_matrix[1][0], rotation_matrix[1][1], rotation_matrix[1][2], cam_position_y],
-                      [rotation_matrix[2][0], rotation_matrix[2][1], rotation_matrix[2][2], cam_position_z],
-                      [0, 0, 0, 1]])
+  # Get camera extrinsics.
+  world_to_cam = get_world_T_cam()
 
   ################## HERE ##################
 Estimating = True

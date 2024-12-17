@@ -18,6 +18,12 @@ from scipy.spatial.transform import Rotation as R
 import time
 
 
+WORLD_ROT_MAT_RB_AGAINST_ROBOT_PLATFORM = np.array([
+    [-0.4122421 ,  0.81648502, -0.40423838],
+    [ 0.70478414,  0.00462011, -0.70940678],
+    [-0.57735238, -0.57734814, -0.57735029]])
+
+
 def get_world_T_cam():
     # Handle dates and changing extrinsics.
     today = datetime.date.today()
@@ -59,6 +65,7 @@ if __name__=='__main__':
   parser.add_argument('--track_refine_iter', type=int, default=2)
   parser.add_argument('--debug', type=int, default=1)
   parser.add_argument('--debug_dir', type=str, default=f'{code_dir}/debug')
+  parser.add_argument('--hardcode_quat', type=bool, default=True)
   args = parser.parse_args()
 
   set_logging_format()
@@ -75,6 +82,23 @@ if __name__=='__main__':
   to_origin, extents = trimesh.bounds.oriented_bounds(mesh)
   bbox = np.stack([-extents/2, extents/2], axis=0).reshape(2,3)
 
+  # Get camera information.
+  # Make sure to update this value according to the current intrinsics from the
+  # camera. ros2 topic echo /camera/aligned_depth/camera_info from host machine.
+  cam_K = np.array([[381.8276672363281, 0.0, 320.3140869140625],
+                    [0.0, 381.4604187011719, 244.2602081298828],
+                    [0.0, 0.0, 1.0]])
+
+  # Get camera extrinsics.
+  world_to_cam = get_world_T_cam()
+
+  hardcoded_initial_rot_mat = None
+  if args.hardcode_quat:
+    input('Ensure the blue and red capsules are touching the robot platform' + \
+          ' and press enter to continue. ')
+    hardcoded_initial_rot_mat = np.linalg.inv(world_to_cam[:3, :3]) @ \
+      WORLD_ROT_MAT_RB_AGAINST_ROBOT_PLATFORM
+
   scorer = ScorePredictor()
   refiner = PoseRefinePredictor()
   glctx = dr.RasterizeCudaContext()
@@ -86,7 +110,8 @@ if __name__=='__main__':
     refiner=refiner,
     debug_dir=debug_dir,
     debug=debug,
-    glctx=glctx
+    glctx=glctx,
+    hardcoded_initial_rot_mat=hardcoded_initial_rot_mat,
   )
   logging.info("estimator initialization done")
 
@@ -137,16 +162,12 @@ if __name__=='__main__':
   align = rs.align(align_to)
 
   i = 0
-  # Make sure to update this value according to the current intrinsics from the 
-  # camera. ros2 topic echo /camera/aligned_depth/camera_info from host machine.
-  cam_K = np.array([[381.8276672363281, 0.0, 320.3140869140625],
-                    [0.0, 381.4604187011719, 244.2602081298828],
-                    [0.0, 0.0, 1.0]])
-
-  # Get camera extrinsics.
-  world_to_cam = get_world_T_cam()
 
   ################## HERE ##################
+
+if debug>=1:
+  lcm_pose_publisher = PosePublisher()
+
 Estimating = True
 time.sleep(3)
 # Streaming loop
@@ -224,8 +245,7 @@ try:
             obj_pose_in_world = world_to_cam @ cam_to_object
 
             # print("This is the object pose" + str(obj_pose_in_world))
-            lcm_pose = PosePublisher()
-            lcm_pose.publish_pose("Jack", obj_pose_in_world)
+            lcm_pose_publisher.publish_pose("Jack", obj_pose_in_world)
             vis = draw_posed_3d_box(cam_K, img=color, ob_in_cam=cam_to_object, bbox=bbox)
             vis = draw_xyz_axis(color, ob_in_cam=cam_to_object, scale=0.1, K=cam_K, thickness=3, transparency=0, is_input_rgb=True)
             cv2.imshow('1', vis[...,::-1])

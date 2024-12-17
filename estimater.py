@@ -19,11 +19,13 @@ class FoundationPose:
   def __init__(self, model_pts, model_normals, symmetry_tfs=None, mesh=None,
                scorer:ScorePredictor=None, refiner:PoseRefinePredictor=None,
                glctx=None, debug=0,
-               debug_dir='/home/bowen/debug/novel_pose_debug/'):
+               debug_dir='/home/bowen/debug/novel_pose_debug/',
+               hardcoded_initial_rot_mat: np.ndarray = None):
     self.gt_pose = None
     self.ignore_normal_flip = True
     self.debug = debug
     self.debug_dir = debug_dir
+    self.hardcoded_initial_rot_mat = hardcoded_initial_rot_mat
     os.makedirs(debug_dir, exist_ok=True)
 
     self.reset_object(model_pts, model_normals, symmetry_tfs=symmetry_tfs, mesh=mesh)
@@ -81,7 +83,6 @@ class FoundationPose:
     logging.info("reset done")
 
 
-
   def get_tf_to_centered_mesh(self):
     tf_to_center = torch.eye(4, dtype=torch.float, device='cuda')
     tf_to_center[:3,3] = -torch.as_tensor(self.model_center, device='cuda', dtype=torch.float)
@@ -103,7 +104,6 @@ class FoundationPose:
       self.scorer.model.to(s)
     if self.glctx is not None:
       self.glctx = dr.RasterizeCudaContext(s)
-
 
 
   def make_rotation_grid(self, min_n_views=40, inplane_step=5):
@@ -132,6 +132,16 @@ class FoundationPose:
     @scene_pts: torch tensor (N,3)
     '''
     ob_in_cams = self.rot_grid.clone()
+    center = self.guess_translation(depth=depth, mask=mask, K=K)
+    ob_in_cams[:,:3,3] = torch.tensor(center, device='cuda', dtype=torch.float).reshape(1,3)
+    return ob_in_cams
+
+
+  def use_hardcoded_orientation(self, K, rgb, depth, mask, scene_pts=None):
+    cam_to_obj_des = np.eye(4)
+    cam_to_obj_des[:3, :3] = self.hardcoded_initial_rot_mat
+
+    ob_in_cams = torch.tensor(cam_to_obj_des.reshape(1,4,4), device='cuda', dtype=torch.float)
     center = self.guess_translation(depth=depth, mask=mask, K=K)
     ob_in_cams[:,:3,3] = torch.tensor(center, device='cuda', dtype=torch.float).reshape(1,3)
     return ob_in_cams
@@ -204,10 +214,13 @@ class FoundationPose:
     self.ob_id = ob_id
     self.ob_mask = ob_mask
 
-    poses = self.generate_random_pose_hypo(K=K, rgb=rgb, depth=depth,
-                                           mask=ob_mask, scene_pts=None)
+    if self.hardcoded_initial_rot_mat is not None:
+      poses = self.use_hardcoded_orientation(K=K, rgb=rgb, depth=depth,
+                                             mask=ob_mask, scene_pts=None)
+    else:
+      poses = self.generate_random_pose_hypo(K=K, rgb=rgb, depth=depth,
+                                             mask=ob_mask, scene_pts=None)
     poses = poses.data.cpu().numpy()
-    # breakpoint()
     logging.info(f'poses:{poses.shape}')
     center = self.guess_translation(depth=depth, mask=ob_mask, K=K)
 

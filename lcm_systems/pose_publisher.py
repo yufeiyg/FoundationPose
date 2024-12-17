@@ -22,7 +22,6 @@ class PosePublisher:
         self.pose_msg.position = self.homogeneous_matrix_to_pose(pose)
         self.pose_msg.velocity = np.zeros(6)
         self.lc.publish("OBJECT_STATE", self.pose_msg.encode())
-        print("Published pose message" + str(self.pose_msg.position))
 
     def homogeneous_matrix_to_pose(self, homogeneous_matrix):
         # Convert a 4x4 homogeneous matrix to a 7 element pose with quaternion

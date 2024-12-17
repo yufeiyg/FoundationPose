@@ -16,8 +16,10 @@ develop-eggs/
 demo_data/*
 dist/
 # *.png
+mask.png
 # *.jpg
 debug/
+torch/
 weights/*
 downloads/
 eggs/
@@ -156,3 +158,5 @@ data/
 logs/
 !BundleTrack/XMem/inference/data
 run_used.yml
+
+*.run

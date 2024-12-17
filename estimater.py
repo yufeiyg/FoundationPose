@@ -16,7 +16,10 @@ import yaml
 
 
 class FoundationPose:
-  def __init__(self, model_pts, model_normals, symmetry_tfs=None, mesh=None, scorer:ScorePredictor=None, refiner:PoseRefinePredictor=None, glctx=None, debug=0, debug_dir='/home/bowen/debug/novel_pose_debug/'):
+  def __init__(self, model_pts, model_normals, symmetry_tfs=None, mesh=None,
+               scorer:ScorePredictor=None, refiner:PoseRefinePredictor=None,
+               glctx=None, debug=0,
+               debug_dir='/home/bowen/debug/novel_pose_debug/'):
     self.gt_pose = None
     self.ignore_normal_flip = True
     self.debug = debug
@@ -24,7 +27,7 @@ class FoundationPose:
     os.makedirs(debug_dir, exist_ok=True)
 
     self.reset_object(model_pts, model_normals, symmetry_tfs=symmetry_tfs, mesh=mesh)
-    self.make_rotation_grid(min_n_views=40, inplane_step=60)
+    self.make_rotation_grid()
 
     self.glctx = glctx
 
@@ -103,7 +106,7 @@ class FoundationPose:
 
 
 
-  def make_rotation_grid(self, min_n_views=40, inplane_step=60):
+  def make_rotation_grid(self, min_n_views=40, inplane_step=5):
     cam_in_obs = sample_views_icosphere(n_views=min_n_views)
     logging.info(f'cam_in_obs:{cam_in_obs.shape}')
     rot_grid = []
@@ -156,7 +159,8 @@ class FoundationPose:
     return center.reshape(3)
 
 
-  def register(self, K, rgb, depth, ob_mask, ob_id=None, glctx=None, iteration=5):
+  def register(self, K, rgb, depth, ob_mask, ob_id=None, glctx=None,
+               iteration=5):
     '''Copmute pose from given pts to self.pcd
     @pts: (N,3) np array, downsampled scene points
     '''
@@ -200,8 +204,10 @@ class FoundationPose:
     self.ob_id = ob_id
     self.ob_mask = ob_mask
 
-    poses = self.generate_random_pose_hypo(K=K, rgb=rgb, depth=depth, mask=ob_mask, scene_pts=None)
+    poses = self.generate_random_pose_hypo(K=K, rgb=rgb, depth=depth,
+                                           mask=ob_mask, scene_pts=None)
     poses = poses.data.cpu().numpy()
+    # breakpoint()
     logging.info(f'poses:{poses.shape}')
     center = self.guess_translation(depth=depth, mask=ob_mask, K=K)
 
@@ -212,11 +218,21 @@ class FoundationPose:
     logging.info(f"after viewpoint, add_errs min:{add_errs.min()}")
 
     xyz_map = depth2xyzmap(depth, K)
-    poses, vis = self.refiner.predict(mesh=self.mesh, mesh_tensors=self.mesh_tensors, rgb=rgb, depth=depth, K=K, ob_in_cams=poses.data.cpu().numpy(), normal_map=normal_map, xyz_map=xyz_map, glctx=self.glctx, mesh_diameter=self.diameter, iteration=iteration, get_vis=self.debug>=2)
+    poses, vis = self.refiner.predict(
+      mesh=self.mesh, mesh_tensors=self.mesh_tensors, rgb=rgb, depth=depth, K=K,
+      ob_in_cams=poses.data.cpu().numpy(), normal_map=normal_map,
+      xyz_map=xyz_map, glctx=self.glctx, mesh_diameter=self.diameter,
+      iteration=iteration, get_vis=self.debug>=2
+    )
     if vis is not None:
       imageio.imwrite(f'{self.debug_dir}/vis_refiner.png', vis)
 
-    scores, vis = self.scorer.predict(mesh=self.mesh, rgb=rgb, depth=depth, K=K, ob_in_cams=poses.data.cpu().numpy(), normal_map=normal_map, mesh_tensors=self.mesh_tensors, glctx=self.glctx, mesh_diameter=self.diameter, get_vis=self.debug>=2)
+    scores, vis = self.scorer.predict(
+      mesh=self.mesh, rgb=rgb, depth=depth, K=K,
+      ob_in_cams=poses.data.cpu().numpy(), normal_map=normal_map,
+      mesh_tensors=self.mesh_tensors, glctx=self.glctx,
+      mesh_diameter=self.diameter, get_vis=self.debug>=2
+    )
     if vis is not None:
       imageio.imwrite(f'{self.debug_dir}/vis_score.png', vis)
 

@@ -15,6 +15,7 @@ from FoundationPose.lcm_systems.pose_publisher import PosePublisher
 # imports for reading camera extrinsics
 import yaml
 from scipy.spatial.transform import Rotation as R
+import time
 
 
 def get_world_T_cam():
@@ -77,7 +78,16 @@ if __name__=='__main__':
   scorer = ScorePredictor()
   refiner = PoseRefinePredictor()
   glctx = dr.RasterizeCudaContext()
-  est = FoundationPose(model_pts=mesh.vertices, model_normals=mesh.vertex_normals, mesh=mesh, scorer=scorer, refiner=refiner, debug_dir=debug_dir, debug=debug, glctx=glctx)
+  est = FoundationPose(
+    model_pts=mesh.vertices,
+    model_normals=mesh.vertex_normals,
+    mesh=mesh,
+    scorer=scorer,
+    refiner=refiner,
+    debug_dir=debug_dir,
+    debug=debug,
+    glctx=glctx
+  )
   logging.info("estimator initialization done")
 
   create_mask()
@@ -142,6 +152,7 @@ time.sleep(3)
 # Streaming loop
 try:
     while Estimating:
+        start_time = time.perf_counter()
         # Get frameset of color and depth
         frames = pipeline.wait_for_frames()
 
@@ -186,7 +197,8 @@ try:
                         break
             mask = cv2.resize(mask, (W,H), interpolation=cv2.INTER_NEAREST).astype(bool).astype(np.uint8)
         
-            pose = est.register(K=cam_K, rgb=color, depth=depth, ob_mask=mask, iteration=args.est_refine_iter)
+            pose = est.register(K=cam_K, rgb=color, depth=depth, ob_mask=mask,
+                                iteration=args.est_refine_iter)
             
             if debug>=3:
                 m = mesh.copy()
@@ -198,18 +210,20 @@ try:
                 o3d.io.write_point_cloud(f'{debug_dir}/scene_complete.ply', pcd)
             
         else:
-            pose = est.track_one(rgb=color, depth=depth, K=cam_K, iteration=args.track_refine_iter)
+            pose = est.track_one(rgb=color, depth=depth, K=cam_K,
+                                 iteration=args.track_refine_iter)
 
         os.makedirs(f'{debug_dir}/ob_in_cam', exist_ok=True)
         np.savetxt(f'{debug_dir}/ob_in_cam/{i}.txt', pose.reshape(4,4))
 
         if debug>=1:
             # center_pose = pose@np.linalg.inv(to_origin)
+            #cam_to_object = pose@np.linalg.inv(to_origin)
             cam_to_object = pose
-            print("pose size: ", pose.shape)
+            # print("pose size: ", pose.shape)
             obj_pose_in_world = world_to_cam @ cam_to_object
 
-            print("This is the object pose" + str(obj_pose_in_world))
+            # print("This is the object pose" + str(obj_pose_in_world))
             lcm_pose = PosePublisher()
             lcm_pose.publish_pose("Jack", obj_pose_in_world)
             vis = draw_posed_3d_box(cam_K, img=color, ob_in_cam=cam_to_object, bbox=bbox)
@@ -223,6 +237,7 @@ try:
             imageio.imwrite(f'{debug_dir}/track_vis/{i}.png', vis)
         
         i += 1
+        print(f"duration: {time.perf_counter() - start_time}")
             
             
         

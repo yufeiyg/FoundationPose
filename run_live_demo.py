@@ -94,8 +94,10 @@ if __name__=='__main__':
 
   hardcoded_initial_rot_mat = None
   if args.hardcode_quat:
-    input('Ensure the blue and red capsules are touching the robot platform' + \
-          ' and press enter to continue. ')
+    input('\nEnsure the blue and red capsules are touching the robot ' + \
+          'platform and press enter to continue.\nNote: A GUI window will' + \
+          ' pop up to show the pose estimate.  Press \'q\' to close the ' + \
+          'window and enable faster publishing without the GUI. ')
     hardcoded_initial_rot_mat = np.linalg.inv(world_to_cam[:3, :3]) @ \
       WORLD_ROT_MAT_RB_AGAINST_ROBOT_PLATFORM
 
@@ -165,10 +167,10 @@ if __name__=='__main__':
 
   ################## HERE ##################
 
-if debug>=1:
-  lcm_pose_publisher = PosePublisher()
+lcm_pose_publisher = PosePublisher()
 
 Estimating = True
+keep_gui_window_open = True
 time.sleep(3)
 # Streaming loop
 try:
@@ -237,20 +239,20 @@ try:
         os.makedirs(f'{debug_dir}/ob_in_cam', exist_ok=True)
         np.savetxt(f'{debug_dir}/ob_in_cam/{i}.txt', pose.reshape(4,4))
 
-        if debug>=1:
-            # center_pose = pose@np.linalg.inv(to_origin)
-            #cam_to_object = pose@np.linalg.inv(to_origin)
-            cam_to_object = pose
-            # print("pose size: ", pose.shape)
-            obj_pose_in_world = world_to_cam @ cam_to_object
+        # Publish the pose over LCM.
+        cam_to_object = pose
+        obj_pose_in_world = world_to_cam @ cam_to_object
+        lcm_pose_publisher.publish_pose("Jack", obj_pose_in_world)
 
-            # print("This is the object pose" + str(obj_pose_in_world))
-            lcm_pose_publisher.publish_pose("Jack", obj_pose_in_world)
-            vis = draw_posed_3d_box(cam_K, img=color, ob_in_cam=cam_to_object, bbox=bbox)
-            vis = draw_xyz_axis(color, ob_in_cam=cam_to_object, scale=0.1, K=cam_K, thickness=3, transparency=0, is_input_rgb=True)
-            cv2.imshow('1', vis[...,::-1])
-            cv2.waitKey(1)
+        if (debug>=1 and keep_gui_window_open) or debug>=2:
+            vis = draw_posed_3d_box(cam_K, img=color, ob_in_cam=pose, bbox=bbox)
+            vis = draw_xyz_axis(color, ob_in_cam=pose, scale=0.1, K=cam_K, thickness=3, transparency=0, is_input_rgb=True)
+            cv2.imshow("debug", vis[...,::-1])
+            key = cv2.waitKey(1)
 
+            if debug==1 and keep_gui_window_open and (key==ord("q")):
+              cv2.destroyWindow("debug")
+              keep_gui_window_open = False
 
         if debug>=2:
             os.makedirs(f'{debug_dir}/track_vis', exist_ok=True)

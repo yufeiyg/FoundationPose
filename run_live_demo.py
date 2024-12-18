@@ -52,8 +52,12 @@ def get_world_T_cam():
         cam_to_world = np.load('extrinsics_thru_12_16_24_color_tf_world.npy')
         world_to_cam = np.linalg.inv(cam_to_world)
 
+    elif today <= datetime.date(year=2024, month=12, day=17):
+        cam_to_world = np.load('extrinsics_thru_12_17_24_color_tf_world.npy')
+        world_to_cam = np.linalg.inv(cam_to_world)
+
     else:
-        cam_to_world = np.load('extrinsics_starting_12_17_24_color_tf_world.npy')
+        cam_to_world = np.load('extrinsics_starting_12_18_24_color_tf_world.npy')
         world_to_cam = np.linalg.inv(cam_to_world)
 
     return world_to_cam
@@ -70,7 +74,8 @@ if __name__=='__main__':
   parser.add_argument('--track_refine_iter', type=int, default=2)
   parser.add_argument('--debug', type=int, default=1)
   parser.add_argument('--debug_dir', type=str, default=f'{code_dir}/debug')
-  parser.add_argument('--hardcode_quat', type=bool, default=True)
+  parser.add_argument('--hardcode_quat', type=int, default=1)
+  parser.add_argument('--lcm_publish', type=int, default=1)
   args = parser.parse_args()
 
   set_logging_format()
@@ -98,9 +103,10 @@ if __name__=='__main__':
   world_to_cam = get_world_T_cam()
 
   hardcoded_initial_rot_mat = None
-  if args.hardcode_quat:
+  if args.hardcode_quat != 0:
     input('\nEnsure the blue and red capsules are touching the robot ' + \
-          'platform and press enter to continue.\nNote: A GUI window will' + \
+          'platform, with the red contact further in the world x direction.' + \
+          '\nPress enter to continue.\nNote: A GUI window will' + \
           ' pop up to show the pose estimate.  Press \'q\' to close the ' + \
           'window and enable faster publishing without the GUI. ')
     hardcoded_initial_rot_mat = np.linalg.inv(world_to_cam[:3, :3]) @ \
@@ -172,7 +178,8 @@ if __name__=='__main__':
 
   ################## HERE ##################
 
-lcm_pose_publisher = PosePublisher()
+if args.lcm_publish > 0:
+    lcm_pose_publisher = PosePublisher()
 
 Estimating = True
 keep_gui_window_open = True
@@ -245,9 +252,10 @@ try:
         np.savetxt(f'{debug_dir}/ob_in_cam/{i}.txt', pose.reshape(4,4))
 
         # Publish the pose over LCM.
-        cam_to_object = pose
-        obj_pose_in_world = world_to_cam @ cam_to_object
-        lcm_pose_publisher.publish_pose("Jack", obj_pose_in_world)
+        if args.lcm_publish > 0:
+            cam_to_object = pose
+            obj_pose_in_world = world_to_cam @ cam_to_object
+            lcm_pose_publisher.publish_pose("Jack", obj_pose_in_world)
 
         if (debug>=1 and keep_gui_window_open) or debug>=2:
             vis = draw_posed_3d_box(cam_K, img=color, ob_in_cam=pose, bbox=bbox)

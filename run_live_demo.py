@@ -14,6 +14,7 @@ import argparse
 from FoundationPose.lcm_systems.pose_publisher import PosePublisher
 # imports for reading camera extrinsics
 import yaml
+import numpy as np
 from scipy.spatial.transform import Rotation as R
 import time
 
@@ -47,8 +48,12 @@ def get_world_T_cam():
             [rotation_matrix[2][0], rotation_matrix[2][1], rotation_matrix[2][2], cam_position_z],
             [0, 0, 0, 1]])
 
+    elif today <= datetime.date(year=2024, month=12, day=16):
+        cam_to_world = np.load('extrinsics_thru_12_16_24_color_tf_world.npy')
+        world_to_cam = np.linalg.inv(cam_to_world)
+
     else:
-        cam_to_world = np.load('extrinsics_starting_09_09_24_color_tf_world.npy')
+        cam_to_world = np.load('extrinsics_starting_12_17_24_color_tf_world.npy')
         world_to_cam = np.linalg.inv(cam_to_world)
 
     return world_to_cam

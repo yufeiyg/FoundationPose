@@ -276,13 +276,13 @@ try:
             obj_pose_in_world = world_to_cam @ cam_to_object
             lcm_pose_publisher.publish_pose("Jack", obj_pose_in_world)
 
-        if (debug>=1 and keep_gui_window_open) or debug>=2:
+        if keep_gui_window_open:
             vis = draw_posed_3d_box(cam_K, img=color, ob_in_cam=pose, bbox=bbox)
             vis = draw_xyz_axis(color, ob_in_cam=pose, scale=0.1, K=cam_K, thickness=3, transparency=0, is_input_rgb=True)
             cv2.imshow("debug", vis[...,::-1])
             key = cv2.waitKey(1)
 
-            if debug==1 and keep_gui_window_open and (key==ord("q")):
+            if debug <= 1 and keep_gui_window_open and (key==ord("q")):
               cv2.destroyWindow("debug")
               keep_gui_window_open = False
 

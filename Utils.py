@@ -104,10 +104,6 @@ set_logging_format()
 def make_mesh_tensors(mesh, device='cuda', max_tex_size=None):
   mesh_tensors = {}
   if isinstance(mesh.visual, trimesh.visual.texture.TextureVisuals):
-    print("HEREEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
-    print(mesh.visual)
-    print(mesh.visual.material)
-    print(mesh.visual.material.image)
     img = np.array(mesh.visual.material.image.convert('RGB'))
     img = img[...,:3]
     if max_tex_size is not None:

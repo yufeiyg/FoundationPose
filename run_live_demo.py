@@ -24,8 +24,13 @@ WORLD_ROT_MAT_RB_AGAINST_ROBOT_PLATFORM = np.array([
     [ 0.70478414,  0.00462011, -0.70940678],
     [-0.57735238, -0.57734814, -0.57735029]])
 
+DIST_CAM_TO_X_AXIS = 0.85
+CAM_CAL_SWITCH_HYSTERESIS = 0.04
 
-def get_world_T_cam():
+
+def get_world_T_cam(dist_from_cam: float = None, was_near: bool = None):
+    is_near = None
+
     # Handle dates and changing extrinsics.
     today = datetime.date.today()
 
@@ -57,10 +62,22 @@ def get_world_T_cam():
         world_to_cam = np.linalg.inv(cam_to_world)
 
     else:
-        cam_to_world = np.load('extrinsics_starting_12_18_24_color_tf_world.npy')
+        assert dist_from_cam is not None, f'Starting 12/18/2024, we use ' + \
+            f'multiple camera calibrations for different distances from the' + \
+            f' camera -- need to provide dist_from_cam.'
+        adj = CAM_CAL_SWITCH_HYSTERESIS if was_near==True else \
+            -CAM_CAL_SWITCH_HYSTERESIS if was_near==False else 0
+        if dist_from_cam > DIST_CAM_TO_X_AXIS + adj:
+            cam_to_world = np.load(
+                'extrinsics_starting_12_18_24_far_color_tf_world.npy')
+            is_near = False
+        else:
+            cam_to_world = np.load(
+                'extrinsics_starting_12_18_24_near_color_tf_world.npy')
+            is_near = True
         world_to_cam = np.linalg.inv(cam_to_world)
 
-    return world_to_cam
+    return world_to_cam, is_near
 
 
 if __name__=='__main__':
@@ -100,12 +117,12 @@ if __name__=='__main__':
                     [0.0, 0.0, 1.0]])
 
   # Get camera extrinsics.
-  world_to_cam = get_world_T_cam()
+  world_to_cam, is_near = get_world_T_cam(dist_from_cam=0)
 
   hardcoded_initial_rot_mat = None
   if args.hardcode_quat != 0:
     input('\nEnsure the blue and red capsules are touching the robot ' + \
-          'platform, with the red contact further in the world x direction.' + \
+          'platform, with the red contact further in the world y direction.' + \
           '\nPress enter to continue.\nNote: A GUI window will' + \
           ' pop up to show the pose estimate.  Press \'q\' to close the ' + \
           'window and enable faster publishing without the GUI. ')
@@ -254,6 +271,8 @@ try:
         # Publish the pose over LCM.
         if args.lcm_publish > 0:
             cam_to_object = pose
+            world_to_cam, is_near = get_world_T_cam(
+                dist_from_cam=pose[2, 3], was_near=is_near)
             obj_pose_in_world = world_to_cam @ cam_to_object
             lcm_pose_publisher.publish_pose("Jack", obj_pose_in_world)
 

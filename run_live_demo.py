@@ -5,6 +5,18 @@
 # and any modifications thereto.  Any use, reproduction, disclosure or
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
+
+"""Instructions for using a new camera calibration:
+
+    1. Change the name of the latest extrinsics file to 'extrinsics_thru_'
+       followed by the last day that the extrinsics were relevant.
+    2. Put the new extrinsics file in the 'extrinsics' directory with the name
+       'extrinsics_starting_' followed by the first day that the extrinsics are
+       relevant (note:  these have to be different dates).
+    3. Change the 'else' block to an 'elif' and add a new 'else' block to the
+       'get_world_T_cam' function.
+"""
+
 import datetime
 import pyrealsense2 as rs
 from estimater import *
@@ -15,6 +27,7 @@ from FoundationPose.lcm_systems.pose_publisher import PosePublisher
 # imports for reading camera extrinsics
 import yaml
 import numpy as np
+import os.path as op
 from scipy.spatial.transform import Rotation as R
 import time
 
@@ -28,6 +41,10 @@ DIST_CAM_TO_X_AXIS = 0.85
 CAM_CAL_SWITCH_HYSTERESIS = 0.04
 
 
+def get_extrinsic(filename):
+    print(f'Loading {filename}')
+    return op.join('extrinsics', filename)
+
 def get_world_T_cam(dist_from_cam: float = None, was_near: bool = None):
     is_near = None
 
@@ -36,7 +53,7 @@ def get_world_T_cam(dist_from_cam: float = None, was_near: bool = None):
 
     if today <= datetime.date(year=2024, month=9, day=8):
         # read camera extrinsics from the extrinsics_thru_09_08_24.yaml file
-        with open('extrinsics_thru_09_08_24.yaml') as file:
+        with open(get_extrinsic('extrinsics_thru_09_08_24.yaml')) as file:
             data_loaded = yaml.safe_load(file)
         cam_position_x = data_loaded['cam0']['pose']['position']['x']
         cam_position_y = data_loaded['cam0']['pose']['position']['y']
@@ -54,27 +71,34 @@ def get_world_T_cam(dist_from_cam: float = None, was_near: bool = None):
             [0, 0, 0, 1]])
 
     elif today <= datetime.date(year=2024, month=12, day=16):
-        cam_to_world = np.load('extrinsics_thru_12_16_24_color_tf_world.npy')
+        cam_to_world = np.load(
+            get_extrinsic('extrinsics_thru_12_16_24_color_tf_world.npy'))
         world_to_cam = np.linalg.inv(cam_to_world)
 
     elif today <= datetime.date(year=2024, month=12, day=17):
-        cam_to_world = np.load('extrinsics_thru_12_17_24_color_tf_world.npy')
+        cam_to_world = np.load(
+            get_extrinsic('extrinsics_thru_12_17_24_color_tf_world.npy'))
         world_to_cam = np.linalg.inv(cam_to_world)
 
-    else:
-        assert dist_from_cam is not None, f'Starting 12/18/2024, we use ' + \
+    elif today <= datetime.date(year=2024, month=12, day=19):
+        assert dist_from_cam is not None, f'Between 12/18-19/2024, we use ' + \
             f'multiple camera calibrations for different distances from the' + \
             f' camera -- need to provide dist_from_cam.'
         adj = CAM_CAL_SWITCH_HYSTERESIS if was_near==True else \
             -CAM_CAL_SWITCH_HYSTERESIS if was_near==False else 0
         if dist_from_cam > DIST_CAM_TO_X_AXIS + adj:
-            cam_to_world = np.load(
-                'extrinsics_starting_12_18_24_far_color_tf_world.npy')
+            cam_to_world = np.load(get_extrinsic(
+                'extrinsics_thru_12_19_24_far_color_tf_world.npy'))
             is_near = False
         else:
-            cam_to_world = np.load(
-                'extrinsics_starting_12_18_24_near_color_tf_world.npy')
+            cam_to_world = np.load(get_extrinsic(
+                'extrinsics_thru_12_19_24_near_color_tf_world.npy'))
             is_near = True
+        world_to_cam = np.linalg.inv(cam_to_world)
+
+    else:
+        cam_to_world = np.load(
+            get_extrinsic('extrinsics_starting_12_20_24_color_tf_world.npy'))
         world_to_cam = np.linalg.inv(cam_to_world)
 
     return world_to_cam, is_near

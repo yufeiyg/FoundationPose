@@ -96,9 +96,14 @@ def get_world_T_cam(dist_from_cam: float = None, was_near: bool = None):
             is_near = True
         world_to_cam = np.linalg.inv(cam_to_world)
 
+    elif today <= datetime.date(year=2025, month=1, day=6):
+        cam_to_world = np.load(
+            get_extrinsic('extrinsics_thru_01_06_25_color_tf_world.npy'))
+        world_to_cam = np.linalg.inv(cam_to_world)
+
     else:
         cam_to_world = np.load(
-            get_extrinsic('extrinsics_starting_12_20_24_color_tf_world.npy'))
+            get_extrinsic('extrinsics_starting_01_07_25_color_tf_world.npy'))
         world_to_cam = np.linalg.inv(cam_to_world)
 
     return world_to_cam, is_near

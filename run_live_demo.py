@@ -36,6 +36,7 @@ WORLD_ROT_MAT_RB_AGAINST_ROBOT_PLATFORM = np.array([
     [-0.4122421 ,  0.81648502, -0.40423838],
     [ 0.70478414,  0.00462011, -0.70940678],
     [-0.57735238, -0.57734814, -0.57735029]])
+WORLD_ROT_MAT_PUSH_T = np.eye(3)
 
 DIST_CAM_TO_X_AXIS = 0.85
 CAM_CAL_SWITCH_HYSTERESIS = 0.04
@@ -113,13 +114,14 @@ if __name__=='__main__':
   parser = argparse.ArgumentParser()
   code_dir = os.path.dirname(os.path.realpath(__file__))
   # parser.add_argument('--mesh_file', type=str, default=f'{code_dir}/demo_data/mustard0/mesh/textured_simple.obj')
-  parser.add_argument('--mesh_file', type=str, default=f'{code_dir}/demo_data/colored_jacktoy_data/mesh/jack_colored.obj')
   # parser.add_argument('--test_scene_dir', type=str, default=f'{code_dir}/demo_data/mustard0')
+  # parser.add_argument('--mesh_file', type=str, default=f'{code_dir}/demo_data/colored_jacktoy_data/mesh/jack_colored.obj')
   # parser.add_argument('--test_scene_dir', type=str, default=f'{code_dir}/demo_data/colored_jacktoy_data')
   parser.add_argument('--est_refine_iter', type=int, default=5)
   parser.add_argument('--track_refine_iter', type=int, default=2)
   parser.add_argument('--debug', type=int, default=1)
   parser.add_argument('--debug_dir', type=str, default=f'{code_dir}/debug')
+  parser.add_argument('--system', type=str, default=None)
   parser.add_argument('--hardcode_quat', type=int, default=1)
   parser.add_argument('--lcm_publish', type=int, default=1)
   args = parser.parse_args()
@@ -127,8 +129,19 @@ if __name__=='__main__':
   set_logging_format()
   set_seed(0)
 
-  print("This is the mesh file: " + args.mesh_file)
-  mesh = trimesh.load(args.mesh_file,force='mesh')
+  mesh_file = f'{code_dir}/demo_data/colored_jacktoy_data/mesh/jack_colored.obj'
+  if args.system == 'jack':
+    pass
+  elif args.system == 't':
+    mesh_file = f'{code_dir}/demo_data/push_t_data/mesh/push_t_white.obj'
+  elif args.system == None:
+    raise ValueError('Need to specify system: "jack" or "t"')
+  else:
+    raise ValueError(f'Unknown system: {args.system} -- can only handle ' + \
+                     f'"jack" or "t"')
+
+  print("This is the mesh file: " + mesh_file)
+  mesh = trimesh.load(mesh_file, force='mesh')
   print("LOADED MESH FILE")
 
   debug = args.debug
@@ -150,13 +163,23 @@ if __name__=='__main__':
 
   hardcoded_initial_rot_mat = None
   if args.hardcode_quat != 0:
-    input('\nEnsure the blue and red capsules are touching the robot ' + \
-          'platform, with the red contact further in the world y direction.' + \
-          '\nPress enter to continue.\nNote: A GUI window will' + \
-          ' pop up to show the pose estimate.  Press \'q\' to close the ' + \
-          'window and enable faster publishing without the GUI. ')
-    hardcoded_initial_rot_mat = np.linalg.inv(world_to_cam[:3, :3]) @ \
-      WORLD_ROT_MAT_RB_AGAINST_ROBOT_PLATFORM
+    if args.system == 'jack':
+      input('\nEnsure the blue and red capsules are touching the robot ' + \
+            'platform, with the red contact further in the world y ' + \
+            'direction.' + \
+            '\nPress enter to continue.\nNote: A GUI window will' + \
+            ' pop up to show the pose estimate.  Press \'q\' to close the ' + \
+            'window and enable faster publishing without the GUI. ')
+      hardcoded_initial_rot_mat = np.linalg.inv(world_to_cam[:3, :3]) @ \
+        WORLD_ROT_MAT_RB_AGAINST_ROBOT_PLATFORM
+    elif args.system == 't':
+      input('\nEnsure the push T is flat on the table with the top of the ' + \
+            'T up against the robot platform.' + \
+            '\nPress enter to continue.\nNote: A GUI window will' + \
+            ' pop up to show the pose estimate.  Press \'q\' to close the ' + \
+            'window and enable faster publishing without the GUI. ')
+      hardcoded_initial_rot_mat = np.linalg.inv(world_to_cam[:3, :3]) @ \
+        WORLD_ROT_MAT_PUSH_T
 
   scorer = ScorePredictor()
   refiner = PoseRefinePredictor()

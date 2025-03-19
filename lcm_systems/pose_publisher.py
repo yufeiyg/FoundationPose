@@ -5,8 +5,10 @@ from scipy.spatial.transform import Rotation as R
 import time
 
 class PosePublisher:
-    def __init__(self):
+    def __init__(self, system_name: str):
         self.lc = lcm.LCM()
+        assert system_name in ['jack', 't']
+        self.prefix = 'capsule_1' if system_name=='jack' else 'vertical_link'
         
     def publish_pose(self, obj_name = "OBJECT", pose = None):
         # Instantiate the message object
@@ -16,8 +18,13 @@ class PosePublisher:
         self.pose_msg.object_name = obj_name
         self.pose_msg.num_positions = 7
         self.pose_msg.num_velocities = 6
-        self.pose_msg.position_names = ["capsule_1_qw", "capsule_1_qx", "capsule_1_qy", "capsule_1_qz", "capsule_1_x", "capsule_1_y", "capsule_1_z"]
-        self.pose_msg.velocity_names = ["capsule_1_wx", "capsule_1_wy", "capsule_1_wz", "capsule_1_vx", "capsule_1_vy", "capsule_1_vz"]
+        self.pose_msg.position_names = [
+            f"{self.prefix}_qw", f"{self.prefix}_qx", f"{self.prefix}_qy",
+            f"{self.prefix}_qz", f"{self.prefix}_x", f"{self.prefix}_y",
+            f"{self.prefix}_z"]
+        self.pose_msg.velocity_names = [
+            f"{self.prefix}_wx", f"{self.prefix}_wy", f"{self.prefix}_wz",
+            f"{self.prefix}_vx", f"{self.prefix}_vy", f"{self.prefix}_vz"]
         # Convert the pose to a 7-element array
         self.pose_msg.position = self.homogeneous_matrix_to_pose(pose)
         self.pose_msg.velocity = np.zeros(6)

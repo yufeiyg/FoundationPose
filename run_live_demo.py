@@ -248,7 +248,7 @@ if __name__=='__main__':
   ################## HERE ##################
 
 if args.lcm_publish > 0:
-    lcm_pose_publisher = PosePublisher()
+    lcm_pose_publisher = PosePublisher(system_name=args.system)
 
 Estimating = True
 keep_gui_window_open = True

@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<!-- A test file to ensure the obj is at the right scale. -->
+<robot name="t_shape">
+  <link name="t_obj">
+    <visual>
+      <geometry>
+        <mesh filename="push_t_bicolor.obj"/>
+      </geometry>
+    </visual>
+    <inertial>
+        <origin rpy="0 0 0" xyz="-0.05 0 0"/>
+        <mass value="1.0"/>
+        <inertia ixx="0.001266586" ixy="0" ixz="0" iyy="0.003766426" iyz="0" izz="0.004766362"/>
+    </inertial>
+    <collision>
+      <geometry>
+        <mesh filename="push_t_bicolor.obj"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="vertical_link">
+    <inertial>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <mass value="0.5"/>
+        <inertia ixx="0.0001333" ixy="0" ixz="0" iyy="0.0011333" iyz="0" izz="0.0011333"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <box size="0.16 0.04 0.04"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>      
+      <material>
+          <color rgba="1 0 0 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.16 0.04 0.04"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </collision>
+  </link>
+
+  <link name="horizontal_link">
+    <inertial>
+        <origin rpy="0 0 1.5708" xyz="-0.1 0 0"/>
+        <mass value="0.5"/>
+        <inertia ixx="0.0001333" ixy="0" ixz="0" iyy="0.0011333" iyz="0" izz="0.0011333"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <box size="0.16 0.04 0.04"/>
+      </geometry>
+      <origin rpy="0 0 1.5708" xyz="-0.1 0 0"/>      
+      <material>
+          <color rgba="1 0 0 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.16 0.04 0.04"/>
+      </geometry>
+      <origin rpy="0 0 1.5708" xyz="-0.1 0 0"/>
+    </collision>
+  </link>
+
+  <joint name="fixed_joint_vt" type="fixed">
+    <parent link="horizontal_link"/>
+    <child link="vertical_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <joint name="fixed_joint_obj_v" type="fixed">
+    <parent link="t_obj"/>
+    <child link="horizontal_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+</robot>

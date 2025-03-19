@@ -133,7 +133,7 @@ if __name__=='__main__':
   if args.system == 'jack':
     pass
   elif args.system == 't':
-    mesh_file = f'{code_dir}/demo_data/push_t_data/mesh/push_t_white.obj'
+    mesh_file = f'{code_dir}/demo_data/push_t_data/mesh/push_t_bicolor.obj'
   elif args.system == None:
     raise ValueError('Need to specify system: "jack" or "t"')
   else:

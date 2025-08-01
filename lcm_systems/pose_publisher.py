@@ -7,7 +7,7 @@ import time
 class PosePublisher:
     def __init__(self, system_name: str):
         self.lc = lcm.LCM()
-        assert system_name in ['jack', 't']
+        # assert system_name in ['jack', 't']
         self.prefix = 'capsule_1' if system_name=='jack' else 'vertical_link'
         
     def publish_pose(self, obj_name = "OBJECT", pose = None):
@@ -28,7 +28,7 @@ class PosePublisher:
         # Convert the pose to a 7-element array
         self.pose_msg.position = self.homogeneous_matrix_to_pose(pose)
         self.pose_msg.velocity = np.zeros(6)
-        self.lc.publish("OBJECT_STATE", self.pose_msg.encode())
+        self.lc.publish(f'OBJECT_{obj_name}_STATE_SIMULATION', self.pose_msg.encode())
 
     def homogeneous_matrix_to_pose(self, homogeneous_matrix):
         # Convert a 4x4 homogeneous matrix to a 7 element pose with quaternion

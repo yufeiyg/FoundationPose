@@ -7,7 +7,7 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 
 
-from Utils import *
+from UtilsF import *
 import json,os,sys
 
 
@@ -174,6 +174,7 @@ class BopBaseReader:
     self.zfar = zfar
 
     self.K_table = {}
+    # print(self.base_dir)
     with open(f'{self.base_dir}/scene_camera.json','r') as ff:
       info = json.load(ff)
     for k in info:
@@ -451,7 +452,8 @@ class YcbVideoReader(BopBaseReader):
 
     self.ob_ids = np.arange(1,22).astype(int).tolist()
     YCB_VIDEO_DIR = os.getenv('YCB_VIDEO_DIR')
-    names = sorted(os.listdir(f'{YCB_VIDEO_DIR}/models/'))
+    # print(f'YCB_VIDEO_DIR: {YCB_VIDEO_DIR}')
+    names = sorted(os.listdir(f'{YCB_VIDEO_DIR}/../models/'))
     self.ob_id_to_names = {}
     self.name_to_ob_id = {}
     for i,ob_id in enumerate(self.ob_ids):

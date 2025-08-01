@@ -7,7 +7,7 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 
 
-from Utils import *
+from UtilsF import *
 import json,uuid,joblib,os,sys,argparse
 from datareader import *
 from estimater import *
@@ -81,7 +81,8 @@ def run_pose_estimation_worker(reader, i_frames, est:FoundationPose, debug=False
 
 def run_pose_estimation():
   wp.force_load(device='cuda')
-  video_dirs = sorted(glob.glob(f'{opt.ycbv_dir}/test/*'))
+  video_dirs = sorted(glob.glob(f'{opt.ycbv_dir}*'))
+  # print(f'video_dirs: {video_dirs}')
   res = NestDict()
 
   debug = opt.debug
@@ -137,7 +138,7 @@ if __name__=='__main__':
   parser.add_argument('--ycbv_dir', type=str, default="/mnt/9a72c439-d0a7-45e8-8d20-d7a235d02763/DATASET/YCB_Video", help="data dir")
   parser.add_argument('--use_reconstructed_mesh', type=int, default=0)
   parser.add_argument('--ref_view_dir', type=str, default="/mnt/9a72c439-d0a7-45e8-8d20-d7a235d02763/DATASET/YCB_Video/bowen_addon/ref_views_16")
-  parser.add_argument('--debug', type=int, default=0)
+  parser.add_argument('--debug', type=int, default=3)
   parser.add_argument('--debug_dir', type=str, default=f'{code_dir}/debug')
   opt = parser.parse_args()
   os.environ["YCB_VIDEO_DIR"] = opt.ycbv_dir

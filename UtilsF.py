@@ -36,16 +36,18 @@ from collections import OrderedDict
 import ruamel.yaml
 yaml = ruamel.yaml.YAML()
 code_dir = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(code_dir)
-# sys.path.append(f"{code_dir}/mycpp/build")
+#sys.path.append(code_dir)
+sys.path.append(f"{code_dir}/mycpp/build")
 try:
   import kornia
 except:
   kornia = None
-try:
-  import mycpp.build.mycpp as mycpp
-except:
-  mycpp = None
+#try:
+import mycpp
+# import ipdb
+# ipdb.set_trace()
+#except:
+#  mycpp = None
 try:
   from bundlesdf.mycuda import common
 except:
@@ -669,6 +671,7 @@ def project_3d_to_2d(pt,K,ob_in_cam):
   projected = K @ ((ob_in_cam@pt)[:3,:])
   projected = projected.reshape(-1)
   projected = projected/projected[2]
+  # breakpoint()
   return projected.reshape(-1)[:2].round().astype(int)
 
 
@@ -681,26 +684,29 @@ def draw_xyz_axis(color, ob_in_cam, scale=0.1, K=np.eye(3), thickness=3, transpa
   xx = np.array([1,0,0,1]).astype(float)
   yy = np.array([0,1,0,1]).astype(float)
   zz = np.array([0,0,1,1]).astype(float)
+
   xx[:3] = xx[:3]*scale
   yy[:3] = yy[:3]*scale
   zz[:3] = zz[:3]*scale
   origin = tuple(project_3d_to_2d(np.array([0,0,0,1]), K, ob_in_cam))
+  # breakpoint()
   xx = tuple(project_3d_to_2d(xx, K, ob_in_cam))
   yy = tuple(project_3d_to_2d(yy, K, ob_in_cam))
   zz = tuple(project_3d_to_2d(zz, K, ob_in_cam))
+  # breakpoint()
   line_type = cv2.LINE_AA
   arrow_len = 0
   tmp = color.copy()
   tmp1 = tmp.copy()
-  tmp1 = cv2.arrowedLine(tmp1, origin, xx, color=(0,0,255), thickness=thickness,line_type=line_type, tipLength=arrow_len)
+  tmp1 = cv2.arrowedLine(tmp1, origin, xx, color=(0,0,255), thickness=thickness,line_type=line_type, tipLength=arrow_len)  # blue
   mask = np.linalg.norm(tmp1-tmp, axis=-1)>0
   tmp[mask] = tmp[mask]*transparency + tmp1[mask]*(1-transparency)
   tmp1 = tmp.copy()
-  tmp1 = cv2.arrowedLine(tmp1, origin, yy, color=(0,255,0), thickness=thickness,line_type=line_type, tipLength=arrow_len)
+  tmp1 = cv2.arrowedLine(tmp1, origin, yy, color=(0,255,0), thickness=thickness,line_type=line_type, tipLength=arrow_len)  # green
   mask = np.linalg.norm(tmp1-tmp, axis=-1)>0
   tmp[mask] = tmp[mask]*transparency + tmp1[mask]*(1-transparency)
   tmp1 = tmp.copy()
-  tmp1 = cv2.arrowedLine(tmp1, origin, zz, color=(255,0,0), thickness=thickness,line_type=line_type, tipLength=arrow_len)
+  tmp1 = cv2.arrowedLine(tmp1, origin, zz, color=(255,0,0), thickness=thickness,line_type=line_type, tipLength=arrow_len)  # red
   mask = np.linalg.norm(tmp1-tmp, axis=-1)>0
   tmp[mask] = tmp[mask]*transparency + tmp1[mask]*(1-transparency)
   tmp = tmp.astype(np.uint8)

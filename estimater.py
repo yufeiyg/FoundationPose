@@ -5,15 +5,17 @@
 # and any modifications thereto.  Any use, reproduction, disclosure or
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
-
-
-from Utils import *
+# import sys
+# import os
+# sys.path.insert(0, "/home/yufeiyang/Documents/FoundationPose")
+# from Utils import compute_mesh_diameter
+from UtilsF import *
 from datareader import *
 import itertools
 from learning.training.predict_score import *
 from learning.training.predict_pose_refine import *
 import yaml
-
+import sys
 
 class FoundationPose:
   def __init__(self, model_pts, model_normals, symmetry_tfs=None, mesh=None,
@@ -51,9 +53,15 @@ class FoundationPose:
     min_xyz = mesh.vertices.min(axis=0)
     self.model_center = (min_xyz+max_xyz)/2
     if mesh is not None:
+      # breakpoint()
       self.mesh_ori = mesh.copy()
       mesh = mesh.copy()
-      mesh.vertices = mesh.vertices - self.model_center.reshape(1,3)
+      print(type(mesh))
+      if type(mesh) is not trimesh.Trimesh:
+        mesh = mesh.to_mesh()
+      
+      mesh.vertices = mesh.vertices.copy() - self.model_center.reshape(1,3)
+      
 
     model_pts = mesh.vertices
     self.diameter = compute_mesh_diameter(model_pts=mesh.vertices, n_sample=10000)

@@ -1,5 +1,5 @@
 # This pulls the pre-built? 4090 GPU docker image from the docker hub
-FROM shingarey/foundationpose_custom_cuda121:latest
+FROM bibitbianchini/foundationpose:latest
 # This installs pyrealsense2
 RUN pip install pyrealsense2
 

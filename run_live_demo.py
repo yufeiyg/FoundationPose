@@ -30,6 +30,7 @@ import numpy as np
 import os.path as op
 from scipy.spatial.transform import Rotation as R
 import time
+import inspect
 
 
 WORLD_ROT_MAT_RB_AGAINST_ROBOT_PLATFORM = np.array([
@@ -122,7 +123,7 @@ if __name__=='__main__':
   parser.add_argument('--debug', type=int, default=1)
   parser.add_argument('--debug_dir', type=str, default=f'{code_dir}/debug')
   parser.add_argument('--system', type=str, default=None)
-  parser.add_argument('--hardcode_quat', type=int, default=1)
+  parser.add_argument('--hardcode_quat', type=int, default=0)
   parser.add_argument('--lcm_publish', type=int, default=1)
   args = parser.parse_args()
 
@@ -133,7 +134,8 @@ if __name__=='__main__':
   if args.system == 'jack':
     pass
   elif args.system == 't':
-    mesh_file = f'{code_dir}/demo_data/push_t_data/mesh/push_t_bicolor.obj'
+    # mesh_file = f'{code_dir}/demo_data/push_t_data/mesh/push_t_bicolor.obj'
+    mesh_file = '/home/yufeiyang/Documents/BundleSDF/auto_rotate_mesh.obj'
   elif args.system == None:
     raise ValueError('Need to specify system: "jack" or "t"')
   else:
@@ -150,6 +152,8 @@ if __name__=='__main__':
 
   to_origin, extents = trimesh.bounds.oriented_bounds(mesh)
   bbox = np.stack([-extents/2, extents/2], axis=0).reshape(2,3)
+  mesh_T = mesh.bounding_box_oriented.primitive.transform
+#   breakpoint()
 
   # Get camera information.
   # Make sure to update this value according to the current intrinsics from the
@@ -159,7 +163,11 @@ if __name__=='__main__':
                     [0.0, 0.0, 1.0]])
 
   # Get camera extrinsics.
-  world_to_cam, is_near = get_world_T_cam(dist_from_cam=0)
+#   world_to_cam, is_near = get_world_T_cam(dist_from_cam=0)
+  world_to_cam = np.array([[-0.10225815, -0.6250423, 0.77386394, -0.27],
+                          [-0.99248708, 0.11664051, -0.03693756, 0.],
+                          [-0.06717635, -0.77182713, -0.63227385, 0.35],
+                          [0., 0., 0., 1.]])
 
   hardcoded_initial_rot_mat = None
   if args.hardcode_quat != 0:
@@ -178,11 +186,12 @@ if __name__=='__main__':
             '\nPress enter to continue.\nNote: A GUI window will' + \
             ' pop up to show the pose estimate.  Press \'q\' to close the ' + \
             'window and enable faster publishing without the GUI. ')
-      hardcoded_initial_rot_mat = np.linalg.inv(world_to_cam[:3, :3]) @ \
-        WORLD_ROT_MAT_PUSH_T
+    #   hardcoded_initial_rot_mat = np.linalg.inv(world_to_cam[:3, :3]) @ \
+    #     WORLD_ROT_MAT_PUSH_T
 
   scorer = ScorePredictor()
   refiner = PoseRefinePredictor()
+#   print("dr module is:", dr.__file__)
   glctx = dr.RasterizeCudaContext()
   est = FoundationPose(
     model_pts=mesh.vertices,
@@ -196,7 +205,7 @@ if __name__=='__main__':
     hardcoded_initial_rot_mat=hardcoded_initial_rot_mat,
   )
   logging.info("estimator initialization done")
-
+  breakpoint()
   create_mask()
   mask = cv2.imread('mask.png')
 
@@ -238,8 +247,6 @@ if __name__=='__main__':
   clipping_distance = clipping_distance_in_meters / depth_scale
 
   # Create an align object
-  # rs.align allows us to perform alignment of depth frames to others frames
-  # The "align_to" is the stream type to which we plan to align depth frames.
   align_to = rs.stream.color
   align = rs.align(align_to)
 
@@ -319,17 +326,12 @@ try:
 
         os.makedirs(f'{debug_dir}/ob_in_cam', exist_ok=True)
         np.savetxt(f'{debug_dir}/ob_in_cam/{i}.txt', pose.reshape(4,4))
-
-        # Publish the pose over LCM.
-        if args.lcm_publish > 0:
-            cam_to_object = pose
-            world_to_cam, is_near = get_world_T_cam(
-                dist_from_cam=pose[2, 3], was_near=is_near)
-            obj_pose_in_world = world_to_cam @ cam_to_object
-            lcm_pose_publisher.publish_pose("Jack", obj_pose_in_world)
+        print("save to " + f'{debug_dir}/ob_in_cam/{i}.txt')
 
         if keep_gui_window_open:
-            vis = draw_posed_3d_box(cam_K, img=color, ob_in_cam=pose, bbox=bbox)
+            # breakpoint()
+            # draw_pose = pose @ np.linalg.inv(mesh_T)
+            # vis = draw_posed_3d_box(cam_K, img=color, ob_in_cam=draw_pose, bbox=bbox)
             vis = draw_xyz_axis(color, ob_in_cam=pose, scale=0.1, K=cam_K, thickness=3, transparency=0, is_input_rgb=True)
             cv2.imshow("debug", vis[...,::-1])
             key = cv2.waitKey(1)
